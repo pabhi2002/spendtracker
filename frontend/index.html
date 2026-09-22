@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spend Tracker</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            padding: 20px;
+            max-width: 960px;
+            margin: 0 auto;
+        }
+        h1 { margin-bottom: 24px; color: #1a1a2e; }
+        h2 { margin: 24px 0 12px; color: #16213e; border-bottom: 2px solid #0f3460; padding-bottom: 4px; }
+
+        /* Form */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+        }
+        .form-grid label { font-weight: 600; font-size: 0.85rem; }
+        .form-grid input, .form-grid select {
+            width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem;
+        }
+        .form-grid button {
+            grid-column: 1 / -1;
+            padding: 10px;
+            background: #0f3460;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        .form-grid button:hover { background: #16213e; }
+
+        /* Summary cards */
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .card h3 { font-size: 0.85rem; color: #888; text-transform: uppercase; }
+        .card .value { font-size: 1.8rem; font-weight: 700; color: #0f3460; margin-top: 4px; }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+        }
+        th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #0f3460; color: #fff; font-size: 0.85rem; text-transform: uppercase; }
+        tr:hover { background: #f0f4ff; }
+
+        /* Alerts */
+        .alert {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        /* Filters */
+        .filters {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        .filters input, .filters select {
+            padding: 6px 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        .filters button {
+            padding: 6px 16px;
+            background: #0f3460;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .status-msg {
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+            display: none;
+        }
+        .status-msg.success { display: block; background: #d4edda; color: #155724; }
+        .status-msg.error { display: block; background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>💰 Spend Tracker</h1>
+
+    <!-- ─── Add Expense ─────────────────────────────────────────── -->
+    <h2>Add Expense</h2>
+    <div id="statusMsg" class="status-msg"></div>
+    <form class="form-grid" id="expenseForm">
+        <div>
+            <label for="amount">Amount (₹)</label>
+            <input type="number" id="amount" step="0.01" min="0.01" required placeholder="e.g. 250">
+        </div>
+        <div>
+            <label for="category">Category</label>
+            <select id="category">
+                <option value="food">Food</option>
+                <option value="transport">Transport</option>
+                <option value="entertainment">Entertainment</option>
+                <option value="utilities">Utilities</option>
+                <option value="shopping">Shopping</option>
+                <option value="health">Health</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div>
+            <label for="note">Note (optional)</label>
+            <input type="text" id="note" placeholder="e.g. Coffee with team">
+        </div>
+        <div>
+            <label for="date">Date</label>
+            <input type="date" id="date" required>
+        </div>
+        <button type="submit">Add Expense</button>
+    </form>
+
+    <!-- ─── Summary ─────────────────────────────────────────────── -->
+    <h2>Summary</h2>
+    <div class="summary-cards" id="summaryCards">
+        <div class="card">
+            <h3>Total Spend</h3>
+            <div class="value" id="totalSpend">₹0.00</div>
+        </div>
+    </div>
+
+    <div id="alertsContainer"></div>
+
+    <h2>Spend by Category</h2>
+    <table>
+        <thead><tr><th>Category</th><th>Total</th></tr></thead>
+        <tbody id="categoryBody"><tr><td colspan="2">No data</td></tr></tbody>
+    </table>
+
+    <h2>Month over Month</h2>
+    <table>
+        <thead><tr><th>Month</th><th>Total</th><th>Change</th></tr></thead>
+        <tbody id="momBody"><tr><td colspan="3">No data</td></tr></tbody>
+    </table>
+
+    <!-- ─── Expenses List ───────────────────────────────────────── -->
+    <h2>Expenses</h2>
+    <div class="filters">
+        <select id="filterCategory">
+            <option value="">All Categories</option>
+            <option value="food">Food</option>
+            <option value="transport">Transport</option>
+            <option value="entertainment">Entertainment</option>
+            <option value="utilities">Utilities</option>
+            <option value="shopping">Shopping</option>
+            <option value="health">Health</option>
+            <option value="other">Other</option>
+        </select>
+        <input type="date" id="filterStart" placeholder="Start date">
+        <input type="date" id="filterEnd" placeholder="End date">
+        <button onclick="loadExpenses()">Filter</button>
+    </div>
+    <table>
+        <thead><tr><th>Date</th><th>Category</th><th>Amount</th><th>Note</th></tr></thead>
+        <tbody id="expenseBody"><tr><td colspan="4">No expenses yet</td></tr></tbody>
+    </table>
+
+    <script>
+        const API_BASE = "http://localhost:8000";
+
+        // Default date to today
+        document.getElementById("date").valueAsDate = new Date();
+
+        // ── Add Expense ──────────────────────────────────────────
+        document.getElementById("expenseForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const statusMsg = document.getElementById("statusMsg");
+            statusMsg.className = "status-msg";
+
+            const payload = {
+                amount: parseFloat(document.getElementById("amount").value),
+                category: document.getElementById("category").value,
+                note: document.getElementById("note").value || null,
+                date: document.getElementById("date").value,
+            };
+
+            try {
+                const resp = await fetch(`${API_BASE}/expenses`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    throw new Error(err.detail || JSON.stringify(err));
+                }
+
+                statusMsg.textContent = "✅ Expense added!";
+                statusMsg.className = "status-msg success";
+                document.getElementById("expenseForm").reset();
+                document.getElementById("date").valueAsDate = new Date();
+
+                // Refresh data
+                loadExpenses();
+                loadSummary();
+            } catch (err) {
+                statusMsg.textContent = `❌ ${err.message}`;
+                statusMsg.className = "status-msg error";
+            }
+
+            setTimeout(() => { statusMsg.className = "status-msg"; }, 4000);
+        });
+
+        // ── Load Expenses ────────────────────────────────────────
+        async function loadExpenses() {
+            const params = new URLSearchParams();
+            const cat = document.getElementById("filterCategory").value;
+            const start = document.getElementById("filterStart").value;
+            const end = document.getElementById("filterEnd").value;
+
+            if (cat) params.append("category", cat);
+            if (start) params.append("start_date", start);
+            if (end) params.append("end_date", end);
+
+            try {
+                const resp = await fetch(`${API_BASE}/expenses?${params}`);
+                const data = await resp.json();
+                const tbody = document.getElementById("expenseBody");
+
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4">No expenses found</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.map(e => `
+                    <tr>
+                        <td>${e.date}</td>
+                        <td>${e.category}</td>
+                        <td>₹${e.amount.toFixed(2)}</td>
+                        <td>${e.note || "—"}</td>
+                    </tr>
+                `).join("");
+            } catch (err) {
+                console.error("Failed to load expenses:", err);
+            }
+        }
+
+        // ── Load Summary ─────────────────────────────────────────
+        async function loadSummary() {
+            try {
+                const resp = await fetch(`${API_BASE}/summary`);
+                const data = await resp.json();
+
+                // Total
+                document.getElementById("totalSpend").textContent =
+                    `₹${data.total_spend.toFixed(2)}`;
+
+                // By category
+                const catBody = document.getElementById("categoryBody");
+                if (data.by_category.length === 0) {
+                    catBody.innerHTML = '<tr><td colspan="2">No data</td></tr>';
+                } else {
+                    catBody.innerHTML = data.by_category.map(c => `
+                        <tr><td>${c.category}</td><td>₹${c.total.toFixed(2)}</td></tr>
+                    `).join("");
+                }
+
+                // Month over month
+                const momBody = document.getElementById("momBody");
+                if (data.month_over_month.length === 0) {
+                    momBody.innerHTML = '<tr><td colspan="3">No data</td></tr>';
+                } else {
+                    momBody.innerHTML = data.month_over_month.map(m => {
+                        let change = "—";
+                        if (m.change_pct !== null) {
+                            const sign = m.change_pct >= 0 ? "+" : "";
+                            const color = m.change_pct >= 0 ? "#c0392b" : "#27ae60";
+                            change = `<span style="color:${color};font-weight:600">${sign}${m.change_pct}%</span>`;
+                        }
+                        return `<tr><td>${m.month}</td><td>₹${m.total.toFixed(2)}</td><td>${change}</td></tr>`;
+                    }).join("");
+                }
+
+                // Alerts
+                const alertsDiv = document.getElementById("alertsContainer");
+                if (data.alerts.length > 0) {
+                    alertsDiv.innerHTML = data.alerts.map(a =>
+                        `<div class="alert">⚠️ ${a.message}</div>`
+                    ).join("");
+                } else {
+                    alertsDiv.innerHTML = "";
+                }
+            } catch (err) {
+                console.error("Failed to load summary:", err);
+            }
+        }
+
+        // Initial load
+        loadExpenses();
+        loadSummary();
+    </script>
+</body>
+</html>
